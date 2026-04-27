@@ -71,11 +71,14 @@
     cnt <- table(sample_id, s_vals)
     cnt <- cnt[sample_lvls, subtype_lvls, drop = FALSE]
 
-    row_totals <- rowSums(cnt)
+    # Convert to plain matrix immediately so sweep/result stays class "matrix"
+    cnt_mat <- matrix(as.numeric(cnt), nrow = nrow(cnt), ncol = ncol(cnt),
+                      dimnames = dimnames(cnt))
+
+    row_totals <- rowSums(cnt_mat)
     row_totals[row_totals == 0L] <- 1L    # guard against empty samples
 
-    prop_mat <- sweep(cnt, 1L, row_totals, FUN = "/")
-    as.matrix(prop_mat)
+    sweep(cnt_mat, 1L, row_totals, FUN = "/")
 }
 
 # ── Delta proportion per subtype ──────────────────────────────────────────────
