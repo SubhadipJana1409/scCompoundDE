@@ -1,0 +1,297 @@
+---
+title: "Decomposing pseudo-bulk DE into transcriptional and compositional
+  components with scCompoundDE"
+author:
+  - name: "Subhadip Jana"
+    email: "subhadipjana1409@gmail.com"
+date: "`r Sys.Date()`"
+output:
+  BiocStyle::html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+vignette: >
+  %\VignetteIndexEntry{Decomposing pseudo-bulk DE with scCompoundDE}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+    collapse  = TRUE,
+    comment   = "#>",
+    fig.width = 7,
+    fig.height = 5,
+    message   = TRUE,
+    warning   = FALSE
+)
+```
+
+# Introduction
+
+## The hidden confound in pseudo-bulk DE
+
+Multi-donor single-cell RNA-seq studies routinely use **pseudo-bulk
+differential expression** to find disease or treatment-associated genes.
+The standard approach aggregates counts per donor and fits a linear model
+across donors. This is statistically sound — but it contains a critical
+biological blind spot.
+
+Consider T cells in a lupus dataset. Disease donors have mostly exhausted
+T cells (high PDCD1, LAG3, TIGIT). Healthy donors have mostly naive T
+cells (high IL7R, CCR7, SELL). A pseudo-bulk DE model will declare PDCD1
+and IL7R as the top DE genes — and both would have small p-values and
+large fold-changes. But:
+
+> **Are these genes DE because T cells changed their transcriptome
+> (transcriptional change)?**
+>
+> **Or because the relative abundance of exhausted vs naive T cells
+> shifted between conditions (compositional change)?**
+
+Standard tools cannot answer this question. They treat the pseudo-bulk
+as a homogeneous entity. `scCompoundDE` decomposes every DE gene into
+these two orthogonal components.
+
+## The TC_ratio score
+
+For each gene, `compoundDE` returns a `TC_ratio` in \[0, 1\]:
+
+| TC_ratio | Interpretation |
+|---|---|
+| ≈ 1.0 | Transcriptional — cells intrinsically changed expression |
+| ≈ 0.0 | Compositional — proportion of subtypes shifted |
+| ≈ 0.5 | Mixed — both mechanisms contribute |
+
+Genes with low TC_ratio should be treated with caution: they may be
+DE in a standard analysis but reflect **composition** rather than
+**biology**.
+
+# Installation
+
+```{r install, eval=FALSE}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("scCompoundDE")
+```
+
+# Simulated example: purely transcriptional signal
+
+We first demonstrate the tool on a dataset where the DE signal is
+deliberately **transcriptional**: the same proportions of TypeA and
+TypeB cells appear in both conditions, but TypeA cells intrinsically
+upregulate genes 1–10 in treatment.
+
+```{r sim_transcriptional}
+library(scCompoundDE)
+library(SingleCellExperiment)
+
+set.seed(42)
+n_genes  <- 150
+n_donors <- 6
+
+counts <- matrix(rpois(n_genes * 240L, 8L),
+                 nrow = n_genes, ncol = 240L)
+rownames(counts) <- paste0("Gene", seq_len(n_genes))
+colnames(counts) <- paste0("Cell", seq_len(240L))
+
+# First 10 genes × 4 in TypeA treatment cells only
+# TypeA cells: cols 61–120 in treatment
+counts[seq_len(10), 61:120] <- counts[seq_len(10), 61:120] * 5L
+
+sce <- SingleCellExperiment(assays = list(counts = counts))
+sce$donor     <- rep(rep(paste0("D", seq_len(n_donors)), each = 10L), 4L)
+sce$cell_type <- "T_cell"
+sce$subtype   <- rep(rep(c("TypeA","TypeB"),
+                         each = n_donors * 10L), 2L)
+sce$condition <- rep(c("ctrl","treat"), each = 120L)
+
+# Check the design
+table(sce$subtype, sce$condition)
+```
+
+## Running compoundDE
+
+```{r run_compoundDE}
+result <- compoundDE(
+    sce,
+    broad_type   = "T_cell",
+    subtype_col  = "subtype",
+    broad_col    = "cell_type",
+    donor        = "donor",
+    condition    = "condition",
+    min_cells    = 3L,
+    min_subtypes = 2L,
+    min_donors   = 2L
+)
+result
+```
+
+## Inspecting results
+
+```{r inspect_results}
+dt <- as.data.frame(deTable(result))
+dt_sorted <- dt[order(dt$adj.P.Val), ]
+head(dt_sorted[, c("gene","logFC","adj.P.Val","TC_ratio","source")], 15)
+```
+
+The injected genes (Gene1–Gene10) should have high TC_ratio values,
+confirming they were detected as transcriptionally driven.
+
+```{r tc_of_injected}
+injected <- dt[dt$gene %in% paste0("Gene", seq_len(10)), ]
+cat("Median TC_ratio of injected genes:",
+    round(median(injected$TC_ratio, na.rm = TRUE), 3), "\n")
+cat("All injected genes classified as transcriptional:",
+    all(injected$source == "transcriptional", na.rm = TRUE), "\n")
+```
+
+## Visualisations
+
+```{r plot_decomp, fig.cap="Scatter of transcriptional vs compositional z-scores. Blue = transcriptional, red = compositional, orange = mixed. Injected genes appear in the top-right (high T, low C)."}
+plotDecomposition(result, fdr_thresh = 0.05, top_n = 10)
+```
+
+```{r plot_tc, fig.cap="Distribution of TC_ratio scores. Vertical lines show classification thresholds at 0.2 and 0.8."}
+plotTCRatio(result, fdr_thresh = 0.05)
+```
+
+```{r plot_prop, fig.cap="Subtype proportions per condition. Balanced design — equal TypeA and TypeB in both conditions."}
+plotProportion(result)
+```
+
+# Simulated example: purely compositional signal
+
+Now we demonstrate the tool on a dataset where the **apparent** DE is
+caused entirely by a subtype proportion shift. Gene1 is a marker of
+TypeB cells. In control, most cells are TypeA (low Gene1). In
+treatment, most cells become TypeB (high Gene1). **A standard DE tool
+would call Gene1 as significantly upregulated — but it is a compositional
+artefact.**
+
+```{r sim_compositional}
+set.seed(99)
+n_genes <- 150
+
+# Unequal proportions: ctrl = 75% TypeA, treat = 75% TypeB
+n_a_ctrl  <- 72L;  n_b_ctrl  <- 24L
+n_a_treat <- 24L;  n_b_treat <- 72L
+n_cells   <- n_a_ctrl + n_b_ctrl + n_a_treat + n_b_treat
+
+counts2 <- matrix(rpois(n_genes * n_cells, 5L),
+                  nrow = n_genes, ncol = n_cells)
+rownames(counts2) <- paste0("Gene", seq_len(n_genes))
+colnames(counts2) <- paste0("Cell", seq_len(n_cells))
+
+# Gene1 is a marker of TypeB only — no transcriptional change
+typeB_idx <- c(
+    seq(n_a_ctrl + 1L, n_a_ctrl + n_b_ctrl),
+    seq(n_a_ctrl + n_b_ctrl + n_a_treat + 1L, n_cells)
+)
+counts2[1L, typeB_idx] <- counts2[1L, typeB_idx] * 8L
+
+sce2 <- SingleCellExperiment(assays = list(counts = counts2))
+sce2$donor <- c(
+    rep(paste0("D", 1:6), each = 12L),
+    rep(paste0("D", 1:6), each = 4L),
+    rep(paste0("D", 1:6), each = 4L),
+    rep(paste0("D", 1:6), each = 12L)
+)
+sce2$cell_type <- "T_cell"
+sce2$subtype   <- c(rep("TypeA", n_a_ctrl), rep("TypeB", n_b_ctrl),
+                    rep("TypeA", n_a_treat), rep("TypeB", n_b_treat))
+sce2$condition <- c(rep("ctrl",  n_a_ctrl + n_b_ctrl),
+                    rep("treat", n_a_treat + n_b_treat))
+
+table(sce2$subtype, sce2$condition)
+```
+
+```{r run_compositional}
+result2 <- compoundDE(
+    sce2,
+    broad_type   = "T_cell",
+    subtype_col  = "subtype",
+    broad_col    = "cell_type",
+    donor        = "donor",
+    condition    = "condition",
+    min_cells    = 3L,
+    min_subtypes = 2L,
+    min_donors   = 2L
+)
+result2
+```
+
+```{r compositional_check}
+dt2 <- as.data.frame(deTable(result2))
+gene1 <- dt2[dt2$gene == "Gene1", c("logFC","adj.P.Val","TC_ratio","source")]
+cat("Gene1 (compositional marker):\n")
+print(gene1)
+```
+
+Gene1 will have a significant p-value (broad DE is strong) but a low
+TC_ratio, correctly identifying it as a compositional artefact.
+
+```{r plot_comp_decomp, fig.cap="With compositional signal, Gene1 sits at high C_score / low T_score."}
+plotDecomposition(result2, fdr_thresh = 0.05, top_n = 5)
+```
+
+```{r plot_comp_prop, fig.cap="Clear proportion shift: TypeB increases dramatically in treatment."}
+plotProportion(result2)
+```
+
+# Filtering by source
+
+After running `compoundDE`, use `filterGenesBySource` to extract gene
+lists by classification:
+
+```{r filter_genes}
+# Genes with transcriptionally-driven DE (real biology)
+transcriptional_genes <- filterGenesBySource(result,
+    source     = "transcriptional",
+    fdr_thresh = 0.05)
+cat("Transcriptional genes (FDR < 0.05):", nrow(transcriptional_genes), "\n")
+head(transcriptional_genes[, c("gene","logFC","adj.P.Val","TC_ratio")])
+
+# Genes that are artefactual (compositional)
+compositional_genes <- filterGenesBySource(result,
+    source     = "compositional",
+    fdr_thresh = 1)    # include all, regardless of significance
+cat("\nCompositional genes (any FDR):", nrow(compositional_genes), "\n")
+```
+
+# Recommended workflow
+
+```{r workflow, eval=FALSE}
+# Step 1: QC with scBatchQC
+library(scBatchQC)
+sce <- batchAwareQCMetrics(sce, batch = "batch")
+sce_clean <- sce[, !sce$scBatchQC_outlier]
+
+# Step 2: Fast DE with scFastDE (or any pseudo-bulk tool)
+library(scFastDE)
+de_result <- fastDE(sce_clean,
+                    donor       = "donor",
+                    cell_type   = "cell_type",
+                    condition   = "condition",
+                    target_type = "T_cell")
+
+# Step 3: Decompose with scCompoundDE
+cde_result <- compoundDE(
+    sce_clean,
+    broad_type  = "T_cell",
+    subtype_col = "cell_subtype",
+    broad_col   = "cell_type",
+    donor       = "donor",
+    condition   = "condition"
+)
+
+# Step 4: Retain only transcriptionally-driven genes
+real_biology <- filterGenesBySource(cde_result,
+    source = "transcriptional", fdr_thresh = 0.05)
+```
+
+# Session information
+
+```{r session}
+sessionInfo()
+```
