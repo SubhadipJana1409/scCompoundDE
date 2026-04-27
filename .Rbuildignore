@@ -1,0 +1,7 @@
+^\.github$
+^.*\.Rproj$
+^LICENSE\.md$
+^\.Rbuildignore$
+^scCompoundDE\.BiocCheck$
+^README\.md$
+^\.gitignore$
