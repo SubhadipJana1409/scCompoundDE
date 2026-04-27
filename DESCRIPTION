@@ -1,0 +1,54 @@
+Package: scCompoundDE
+Type: Package
+Title: Compositional and Transcriptional Decomposition of Pseudo-Bulk
+    Differential Expression
+Version: 0.99.0
+Authors@R: c(
+    person("Subhadip", "Jana", role = c("aut", "cre"),
+           email = "subhadipjana1409@gmail.com",
+           comment = c(ORCID = "0009-0003-7860-2853")))
+Description:
+    scCompoundDE decomposes pseudo-bulk differential expression (DE) signals
+    into two orthogonal components: transcriptional changes (cell-intrinsic
+    expression shifts) and compositional changes (shifts in the relative
+    abundance of cell subtypes). Standard pseudo-bulk DE tools confound these
+    two sources of signal, producing spurious DE calls when subtype proportions
+    differ between conditions. scCompoundDE fits per-subtype limma-voom models,
+    estimates subtype proportion shifts, and uses a z-score-normalized
+    decomposition to assign each gene a TC_ratio score — the fraction of its
+    DE signal attributable to transcription versus composition. Genes are then
+    classified as transcriptional (real biology), compositional (artifact), or
+    mixed (requires caution). All functions operate natively on
+    SingleCellExperiment objects and return a CDEResult S4 object that
+    extends the standard DE output with full decomposition statistics.
+License: MIT + file LICENSE
+URL: https://github.com/SubhadipJana1409/scCompoundDE
+BugReports: https://github.com/SubhadipJana1409/scCompoundDE/issues
+biocViews: SingleCell, DifferentialExpression, StatisticalMethod,
+           GeneExpression, Transcriptomics, CellBasedAssays,
+           Sequencing, WorkflowStep
+Encoding: UTF-8
+Depends:
+    R (>= 4.5.0)
+Imports:
+    SingleCellExperiment,
+    SummarizedExperiment,
+    S4Vectors,
+    BiocParallel,
+    Matrix,
+    limma,
+    methods,
+    stats,
+    ggplot2,
+    rlang,
+    utils
+Suggests:
+    BiocStyle,
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0),
+    scuttle,
+    withr
+VignetteBuilder: knitr
+RoxygenNote: 7.3.3
+Config/testthat/edition: 3
