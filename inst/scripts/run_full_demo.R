@@ -161,6 +161,7 @@ f2 <- file.path(figdir, "scCompoundDE_tc_ratio.png")
 ggplot2::ggsave(f2, p2, width = 7, height = 5, dpi = 150)
 
 ## Proportion bar chart
+set.seed(42)
 p3 <- plotProportion(res)
 f3 <- file.path(figdir, "scCompoundDE_proportions.png")
 ggplot2::ggsave(f3, p3, width = 8, height = 6, dpi = 150)
