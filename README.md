@@ -104,7 +104,7 @@ The algorithm correctly identified **9 out of 10** canonical interferon-stimulat
 
 ### Artefact Detection
 
-Out of 1,204 significant genes (FDR < 0.05), **203 genes** were flagged as **purely compositional artefacts** (TC_ratio ≤ 0.2). These are genes that standard pseudo-bulk tools would mistakenly report as cell-intrinsic DEGs, but are actually just the result of subtype proportion shifts (e.g., an influx of a specific cell type) across conditions.
+Out of 5,975 significant genes (FDR < 0.05), **547 genes** were flagged as **purely compositional artefacts** (TC_ratio ≤ 0.2). These are genes that standard pseudo-bulk tools would mistakenly report as cell-intrinsic DEGs, but are actually just the result of subtype proportion shifts (e.g., an influx of a specific cell type) across conditions. Examples of these artefacts include *ACTB*, *FTH1*, *GAPDH*, and *S100A8*.
 
 ### Decomposition scatter plot
 
