@@ -20,6 +20,8 @@ Standard pseudo-bulk tools (DESeq2, edgeR, limma-voom) cannot
 distinguish between these two sources. Every published pseudo-bulk DE
 result potentially conflates them.
 
+<img src="man/figures/scCompoundDE_diagram.png" width="800" alt="scCompoundDE conceptual diagram — existing ecosystem vs the scCompoundDE solution"/>
+
 ## The problem
 
 ```
