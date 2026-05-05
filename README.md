@@ -92,6 +92,35 @@ plotTCRatio(result)        # TC_ratio histogram
 plotProportion(result)     # subtype proportions per condition
 ```
 
+## Real data validation
+
+Tested on the Kang et al. (2018) IFN-β PBMC dataset (8 donors,
+ctrl vs stimulated, ~29,000 cells across 8 cell types). scCompoundDE
+correctly classified 9/10 canonical IFN-β response genes as
+**transcriptionally driven**, confirming it separates real biology from
+proportion artefacts.
+
+### Decomposition scatter plot
+
+Each gene's transcriptional (T) vs compositional (C) z-scores.
+Blue = transcriptional, red = compositional, orange = mixed.
+
+<img src="man/figures/scCompoundDE_decomposition.png" width="700"/>
+
+### TC_ratio distribution
+
+Histogram of TC_ratio values across all significant genes. Vertical
+lines mark the classification thresholds (0.2 and 0.8).
+
+<img src="man/figures/scCompoundDE_tc_ratio.png" width="600"/>
+
+### Subtype proportion shifts
+
+Mean subtype proportions per condition. Shifts here drive the
+compositional component of the DE signal.
+
+<img src="man/figures/scCompoundDE_proportions.png" width="600"/>
+
 ## The algorithm
 
 1. **Filter** sparse donor-subtype combinations (`min_cells`).
@@ -121,14 +150,6 @@ deTable(result)              # DataFrame with all stats + TC_ratio + source
 subtypeProportions(result)   # matrix: samples × subtypes
 subtypeDE(result)            # list of per-subtype DE DataFrames
 tcRatio(result)              # named numeric: TC_ratio per gene
-```
-
-## Part of a trilogy
-
-```
-scBatchQC      →  "Are my cells clean?"
-scFastDE       →  "What genes change?"
-scCompoundDE   →  "Is that change transcriptional or compositional?"
 ```
 
 ## Citation

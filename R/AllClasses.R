@@ -2,7 +2,7 @@
 #'
 #' @description
 #' An S4 class storing the output of \code{\link{compoundDE}}. Every
-#' pseudo-bulk DE gene is assigned a \code{TC_ratio} score — the fraction
+#' pseudo-bulk DE gene is assigned a \code{TC_ratio} score -- the fraction
 #' of its observed fold-change attributable to transcriptional (cell-intrinsic)
 #' versus compositional (subtype proportion shift) signal.
 #'
@@ -31,7 +31,7 @@ setClass(
     )
 )
 
-# ── Constructor ───────────────────────────────────────────────────────────────
+# -- Constructor ---------------------------------------------------------------
 
 #' @title Constructor for CDEResult
 #'
@@ -79,7 +79,7 @@ CDEResult <- function(deTable, subtypeProportions, subtypeDE,
         params             = params)
 }
 
-# ── Generics ──────────────────────────────────────────────────────────────────
+# -- Generics ------------------------------------------------------------------
 
 #' @title Accessor for the DE table in a CDEResult
 #'
@@ -160,7 +160,7 @@ setGeneric("subtypeDE", function(x, ...) standardGeneric("subtypeDE"))
 
 #' @title Accessor for TC_ratio vector in a CDEResult
 #'
-#' @description Returns the per-gene TC_ratio vector — the fraction of
+#' @description Returns the per-gene TC_ratio vector -- the fraction of
 #'   DE signal attributable to transcriptional versus compositional change.
 #'   Values near 1 = transcriptional (real biology);
 #'   values near 0 = compositional (artifact).
@@ -186,7 +186,7 @@ setGeneric("subtypeDE", function(x, ...) standardGeneric("subtypeDE"))
 #' @export
 setGeneric("tcRatio", function(x, ...) standardGeneric("tcRatio"))
 
-# ── Methods ───────────────────────────────────────────────────────────────────
+# -- Methods -------------------------------------------------------------------
 
 #' @title Show method for CDEResult
 #'
@@ -212,7 +212,7 @@ setMethod("show", "CDEResult", function(object) {
         paste(object@params$subtypes, collapse = ", "), "\n")
     cat("  Genes tested   :", nrow(dt), "\n")
     cat("  Significant    :", n_sig, "(adj.P.Val < 0.05)\n")
-    cat("  ── Decomposition ──────────────────\n")
+    cat("  -- Decomposition ------------------\n")
     cat("  Transcriptional:", n_trans,
         "genes (TC_ratio >=", object@params$tc_thresh_high, ")\n")
     cat("  Compositional  :", n_comp,

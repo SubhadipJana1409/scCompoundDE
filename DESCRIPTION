@@ -26,10 +26,10 @@ URL: https://github.com/SubhadipJana1409/scCompoundDE
 BugReports: https://github.com/SubhadipJana1409/scCompoundDE/issues
 biocViews: SingleCell, DifferentialExpression, StatisticalMethod,
            GeneExpression, Transcriptomics, CellBasedAssays,
-           Sequencing, WorkflowStep
+           Sequencing, WorkflowStep, Transcription
 Encoding: UTF-8
 Depends:
-    R (>= 4.5.0)
+    R (>= 4.6.0)
 Imports:
     SingleCellExperiment,
     SummarizedExperiment,
@@ -50,5 +50,5 @@ Suggests:
     scuttle,
     withr
 VignetteBuilder: knitr
-RoxygenNote: 7.3.3
 Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0

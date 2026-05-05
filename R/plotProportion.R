@@ -46,11 +46,11 @@
 #' @seealso \code{\link{compoundDE}}, \code{\link{plotDecomposition}},
 #'   \code{\link{plotTCRatio}}
 #'
-#' @importFrom ggplot2 ggplot aes geom_bar geom_jitter position_stack
-#'   position_dodge scale_fill_manual scale_color_manual labs theme_bw
-#'   theme element_text element_blank facet_wrap
+#' @importFrom ggplot2 ggplot aes geom_bar geom_jitter position_jitter
+#'   position_stack position_dodge scale_fill_manual scale_color_manual
+#'   labs theme_bw theme element_text element_blank facet_wrap
 #' @importFrom methods is
-#' @importFrom stats reshape
+#' @importFrom stats reshape aggregate setNames
 #' @export
 plotProportion <- function(result,
                             show_points = TRUE,

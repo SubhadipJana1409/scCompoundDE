@@ -5,3 +5,6 @@
 ^scCompoundDE\.BiocCheck$
 ^README\.md$
 ^\.gitignore$
+^\.Rproj\.user$
+^\.positai$
+^\.claude$

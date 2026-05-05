@@ -5,3 +5,6 @@
 *.Rproj
 *.tar.gz
 *.Rcheck/
+.positai
+.RDataTmp*
+*.BiocCheck/

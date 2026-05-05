@@ -1,8 +1,8 @@
-# ── Internal helper functions for scCompoundDE ────────────────────────────────
+# -- Internal helper functions for scCompoundDE --------------------------------
 # These are not exported. All exported API lives in compoundDE.R and
 # plotDecomposition.R.
 
-# ── Pseudo-bulk aggregation ───────────────────────────────────────────────────
+# -- Pseudo-bulk aggregation ---------------------------------------------------
 
 #' Build pseudo-bulk matrix for one group of cells
 #'
@@ -41,7 +41,7 @@
     list(matrix = pb_mat, weights = weights, ncells = ncells)
 }
 
-# ── Subtype proportion matrix ─────────────────────────────────────────────────
+# -- Subtype proportion matrix -------------------------------------------------
 
 #' Compute subtype proportion matrix
 #'
@@ -81,14 +81,14 @@
     sweep(cnt_mat, 1L, row_totals, FUN = "/")
 }
 
-# ── Delta proportion per subtype ──────────────────────────────────────────────
+# -- Delta proportion per subtype ----------------------------------------------
 
 #' Compute mean proportion change (condition 2 minus condition 1)
 #'
 #' @param prop_mat Matrix from \code{.computeProportions}.
 #' @param cond_levels Two-element character vector of condition levels.
 #'
-#' @return Named numeric vector of Δπ per subtype.
+#' @return Named numeric vector of Deltapi per subtype.
 #'
 #' @keywords internal
 #' @noRd
@@ -107,7 +107,7 @@
     mean2 - mean1
 }
 
-# ── Mean log2 expression per subtype ─────────────────────────────────────────
+# -- Mean log2 expression per subtype -----------------------------------------
 
 #' Compute mean log2 CPM expression per subtype
 #'
@@ -128,12 +128,24 @@
     expr_list <- lapply(subtypes, function(k) {
         idx <- s_vals == k
         if (sum(idx) == 0L) return(rep(NA_real_, nrow(counts)))
-        sub_counts  <- counts[, idx, drop = FALSE]
-        lib_sizes   <- colSums(sub_counts)
+        sub_counts <- counts[, idx, drop = FALSE]
+
+        # Compute library sizes on sparse matrix (no densification)
+        lib_sizes <- Matrix::colSums(sub_counts)
         lib_sizes[lib_sizes == 0L] <- 1L
-        cpm_mat     <- sweep(sub_counts, 2L, lib_sizes / 1e6, FUN = "/")
-        log2_cpm    <- log2(as.matrix(cpm_mat) + 1)
-        rowMeans(log2_cpm)
+
+        # Process in row chunks to avoid full dense allocation
+        n_genes    <- nrow(sub_counts)
+        chunk_size <- 2000L
+        result     <- numeric(n_genes)
+
+        for (start in seq(1L, n_genes, chunk_size)) {
+            end       <- min(start + chunk_size - 1L, n_genes)
+            chunk     <- as.matrix(sub_counts[start:end, , drop = FALSE])
+            cpm_chunk <- sweep(chunk, 2L, lib_sizes / 1e6, FUN = "/")
+            result[start:end] <- rowMeans(log2(cpm_chunk + 1))
+        }
+        result
     })
 
     expr_mat <- do.call(cbind, expr_list)
@@ -142,7 +154,7 @@
     expr_mat
 }
 
-# ── Per-subtype limma-voom DE ─────────────────────────────────────────────────
+# -- Per-subtype limma-voom DE -------------------------------------------------
 
 #' Run limma-voom DE for one subtype
 #'
@@ -177,7 +189,7 @@
     d_vals <- as.character(colData(sce)[[donor]])
     c_vals <- as.character(colData(sce)[[condition]])
 
-    # ── Remove sparse donor-condition combos ──────────────────────────────────
+    # -- Remove sparse donor-condition combos ----------------------------------
     combo        <- paste(d_vals, c_vals, sep = "___")
     combo_counts <- table(combo)
     sparse       <- names(combo_counts)[combo_counts < min_cells]
@@ -192,11 +204,11 @@
     if (n_donors < min_donors)
         stop("Fewer than ", min_donors, " donors after sparse filtering.")
 
-    # ── Detect paired design ─────────────────────────────────────────────────
+    # -- Detect paired design -------------------------------------------------
     donor_conds <- tapply(c_vals, d_vals, function(x) length(unique(x)))
     is_paired   <- any(donor_conds > 1L)
 
-    # ── Build sample labels ───────────────────────────────────────────────────
+    # -- Build sample labels ---------------------------------------------------
     sample_ids <- if (is_paired) {
         paste(d_vals, c_vals, sep = "___")
     } else {
@@ -207,7 +219,7 @@
     pb_mat  <- pb$matrix
     weights <- pb$weights
 
-    # ── Gene filter ───────────────────────────────────────────────────────────
+    # -- Gene filter -----------------------------------------------------------
     lib_sizes <- colSums(pb_mat)
     lib_sizes[lib_sizes == 0L] <- 1L
     cpm_mat <- sweep(pb_mat, 2L, lib_sizes / 1e6, FUN = "/")
@@ -218,7 +230,7 @@
 
     sample_levels <- colnames(pb_mat)
 
-    # ── Build design matrix ───────────────────────────────────────────────────
+    # -- Build design matrix ---------------------------------------------------
     if (is_paired) {
         parts   <- strsplit(sample_levels, "___", fixed = TRUE)
         cond_f  <- factor(vapply(parts, `[`, character(1L), 2L),
@@ -248,14 +260,14 @@
         colnames(design) <- cond_cols
     }
 
-    # ── Contrast ──────────────────────────────────────────────────────────────
+    # -- Contrast --------------------------------------------------------------
     contrast_str <- if (is.null(contrast)) {
         paste(cond_cols[2L], "-", cond_cols[1L])
     } else {
         contrast
     }
 
-    # ── limma-voom ────────────────────────────────────────────────────────────
+    # -- limma-voom ------------------------------------------------------------
     wt_mat <- matrix(rep(weights, each = nrow(pb_filt)),
                      nrow = nrow(pb_filt))
     v    <- voom(pb_filt, design, weights = wt_mat, plot = FALSE)
@@ -277,7 +289,7 @@
     )
 }
 
-# ── Core decomposition ────────────────────────────────────────────────────────
+# -- Core decomposition --------------------------------------------------------
 
 #' Decompose broad DE into transcriptional and compositional components
 #'
@@ -289,7 +301,7 @@
 #' @param broad_de DataFrame from broad pseudo-bulk DE.
 #' @param subtype_de Named list of per-subtype DE DataFrames.
 #' @param mean_expr Matrix (genes x subtypes) of mean log2 CPM.
-#' @param delta_pi Named vector of Δπ per subtype.
+#' @param delta_pi Named vector of Deltapi per subtype.
 #' @param prop_mat Proportion matrix (samples x subtypes).
 #' @param tc_thresh_high Upper TC_ratio threshold for "transcriptional".
 #' @param tc_thresh_low Lower TC_ratio threshold for "compositional".
@@ -310,10 +322,10 @@
     # Mean proportion of each subtype across ALL samples (pi_bar)
     pi_bar <- colMeans(prop_mat[, valid_sub, drop = FALSE], na.rm = TRUE)
 
-    # Δπ for valid subtypes only
+    # Deltapi for valid subtypes only
     delta_pi_valid <- delta_pi[valid_sub]
 
-    # ── logFC matrix: genes x subtypes (0 if gene not in that subtype DE) ────
+    # -- logFC matrix: genes x subtypes (0 if gene not in that subtype DE) ----
     logfc_mat <- matrix(0, nrow = n_genes, ncol = n_sub,
                         dimnames = list(all_genes, valid_sub))
     for (k in valid_sub) {
@@ -324,7 +336,7 @@
             logfc_mat[common, k] <- de_k[match(common, g_k), "logFC"]
     }
 
-    # ── mu matrix: genes x subtypes (mean log2 CPM) ──────────────────────────
+    # -- mu matrix: genes x subtypes (mean log2 CPM) --------------------------
     mu_mat <- matrix(0, nrow = n_genes, ncol = n_sub,
                      dimnames = list(all_genes, valid_sub))
     for (k in valid_sub) {
@@ -336,15 +348,15 @@
     }
     mu_mat[is.na(mu_mat)] <- 0
 
-    # ── T_g and C_g ───────────────────────────────────────────────────────────
-    # T_g = logfc_mat %*% pi_bar  (1 x n_sub) × (n_sub x 1)
+    # -- T_g and C_g -----------------------------------------------------------
+    # T_g = logfc_mat %*% pi_bar  (1 x n_sub) x (n_sub x 1)
     T_g <- as.vector(logfc_mat %*% pi_bar[valid_sub])
     # C_g = mu_mat   %*% delta_pi (composition-weighted expression shift)
     C_g <- as.vector(mu_mat   %*% delta_pi_valid[valid_sub])
     names(T_g) <- all_genes
     names(C_g) <- all_genes
 
-    # ── Z-score across genes (to make T and C comparable) ────────────────────
+    # -- Z-score across genes (to make T and C comparable) --------------------
     .zscore <- function(x) {
         s <- stats::sd(x, na.rm = TRUE)
         m <- mean(x, na.rm = TRUE)
@@ -354,13 +366,13 @@
     T_z <- .zscore(T_g)
     C_z <- .zscore(C_g)
 
-    # ── TC_ratio ──────────────────────────────────────────────────────────────
+    # -- TC_ratio --------------------------------------------------------------
     abs_T    <- abs(T_z)
     abs_C    <- abs(C_z)
     TC_ratio <- abs_T / (abs_T + abs_C + 1e-10)
     names(TC_ratio) <- all_genes
 
-    # ── Classification ────────────────────────────────────────────────────────
+    # -- Classification --------------------------------------------------------
     source <- rep("mixed", n_genes)
     source[TC_ratio >= tc_thresh_high] <- "transcriptional"
     source[TC_ratio <= tc_thresh_low]  <- "compositional"

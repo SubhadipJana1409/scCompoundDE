@@ -13,7 +13,7 @@
 #' arising from subtype proportion shifts. For example, if T cells in disease
 #' donors are predominantly exhausted (high PDCD1, TOX) while T cells in
 #' healthy donors are predominantly naive (high IL7R, CCR7), a standard
-#' pseudo-bulk DE analysis will report PDCD1 and IL7R as significantly DE —
+#' pseudo-bulk DE analysis will report PDCD1 and IL7R as significantly DE --
 #' but these genes changed because the \emph{composition} of T cells changed,
 #' not because T cells themselves changed their transcriptome. scCompoundDE
 #' detects and quantifies this confound for every tested gene.
@@ -22,11 +22,11 @@
 #' For each gene, scCompoundDE computes a \strong{TC_ratio} score in
 #' \code{[0, 1]}:
 #' \itemize{
-#'   \item \strong{TC_ratio ≈ 1} — gene is driven by cell-intrinsic
+#'   \item \strong{TC_ratio ~= 1} -- gene is driven by cell-intrinsic
 #'     transcriptional change (real biology).
-#'   \item \strong{TC_ratio ≈ 0} — gene is driven by a shift in subtype
+#'   \item \strong{TC_ratio ~= 0} -- gene is driven by a shift in subtype
 #'     proportions (compositional artefact).
-#'   \item \strong{TC_ratio ≈ 0.5} — mixed signal (both components
+#'   \item \strong{TC_ratio ~= 0.5} -- mixed signal (both components
 #'     contribute).
 #' }
 #'
