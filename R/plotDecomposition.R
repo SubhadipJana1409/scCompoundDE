@@ -49,9 +49,7 @@
 #' @seealso \code{\link{compoundDE}}, \code{\link{plotTCRatio}},
 #'   \code{\link{plotProportion}}
 #'
-#' @importFrom ggplot2 ggplot aes geom_point geom_vline geom_hline
-#'   scale_color_manual labs theme_bw theme element_text element_blank
-#'   geom_text annotate
+#' @importFrom ggplot2 ggplot aes geom_point geom_vline geom_hline scale_color_manual labs theme_bw theme element_text element_blank geom_text annotate
 #' @importFrom methods is
 #' @importFrom utils head
 #' @export

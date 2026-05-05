@@ -45,9 +45,7 @@
 #' @seealso \code{\link{compoundDE}}, \code{\link{plotDecomposition}},
 #'   \code{\link{plotProportion}}
 #'
-#' @importFrom ggplot2 ggplot aes geom_histogram geom_vline
-#'   scale_fill_manual labs theme_bw theme element_text element_blank
-#'   annotate
+#' @importFrom ggplot2 ggplot aes geom_histogram geom_vline scale_fill_manual labs theme_bw theme element_text element_blank annotate
 #' @importFrom methods is
 #' @export
 plotTCRatio <- function(result,
