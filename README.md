@@ -96,7 +96,6 @@ plotProportion(result)     # subtype proportions per condition
 
 We validated **scCompoundDE** on the widely used Kang et al. (2018) IFN-β PBMC dataset:
 - **Scale:** 35,635 genes, 29,056 cells, 8 donors, 8 cell subtypes.
-- **Speed:** Full decomposition pipeline ran in **~4 minutes** (234 seconds) on a standard machine.
 
 ### Biological Accuracy (The Ground Truth)
 
